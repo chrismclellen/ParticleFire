@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParticleFire - Accurate C++ Port</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body { 
+            background: #000; 
+            overflow: hidden; 
+            font-family: 'Courier New', monospace;
+        }
+        canvas { 
+            display: block; 
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        
+        #info {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.9);
+            font-size: 24px;
+            text-align: center;
+            line-height: 1.5;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            background: rgba(0,0,0,0.85);
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 11px;
+            width: 280px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        #controls h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .control-row label {
+            flex: 1;
+        }
+        
+        .control-row input[type="range"] {
+            flex: 1;
+            margin: 0 5px;
+        }
+        
+        .control-row span {
+            width: 30px;
+            text-align: right;
+        }
+        
+        .control-row select {
+            flex: 1;
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 2px;
+        }
+        
+        .control-row input[type="checkbox"] {
+            margin-left: 10px;
+        }
+        
+        .color-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        
+        .color-button {
+            flex: 1;
+            height: 30px;
+            border: 2px solid #444;
+            cursor: pointer;
+        }
+        
+        #toggle-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            border: 1px solid #444;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="info"></div>
+    
+    <button id="toggle-panel">Show Controls</button>
+    
+    <div id="controls" class="hidden">
+        <h3>ParticleFire Controls</h3>
+        
+        <div class="control-group">
+            <div class="control-row">
+                <label>Particle Style:</label>
+                <select id="particleStyle">
+                    <option value="0">Random</option>
+                    <option value="1">StarField</option>
+                    <option value="2">Explosive</option>
+                    <option value="3">Rings</option>
+                    <option value="4">Spirals</option>
+                    <option value="5">Popcorn</option>
+                    <option value="6">Rainbow Hole</option>
+                    <option value="7">Worms</option>
+                    <option value="8">Galactic Storm</option>
+                    <option value="9">Pixie Dust</option>
+                </select>
+            </div>
+            
+            <div class="control-row">
+                <label>Wall Style:</label>
+                <select id="wallStyle">
+                    <option value="0">Random</option>
+                    <option value="1">Rainbow</option>
+                    <option value="2">Smoke</option>
+                    <option value="3">None</option>
+                </select>
+            </div>
+            
+            <div class="control-row">
+                <label>Color Scheme:</label>
+                <select id="colorScheme">
+                    <option value="-1">Custom</option>
+                    <option value="0">Fiery Orange</option>
+                    <option value="1">Skyish Teal</option>
+                    <option value="2">Velvet Blue</option>
+                    <option value="3">Slimy Green</option>
+                    <option value="4">Burning Pink</option>
+                    <option value="5">Flaming Metal</option>
+                </select>
+            </div>
+            
+            <div class="color-buttons" id="colorButtons" style="display:none">
+                <input type="color" id="color1" class="color-button" value="#ff8800">
+                <input type="color" id="color2" class="color-button" value="#ffff00">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <div class="control-row">
+                <label>Particles:</label>
+                <input type="range" id="particleCount" min="500" max="10000" step="500" value="2000">
+                <span id="particleCountVal">2000</span>
+            </div>
+            
+            <div class="control-row">
+                <label>Gravity Time:</label>
+                <input type="range" id="gravityTime" min="10" max="200" step="10" value="50">
+                <span id="gravityTimeVal">50s</span>
+            </div>
+            
+            <div class="control-row">
+                <label>Event Speed:</label>
+                <input type="range" id="eventSpeed" min="5" max="100" step="5" value="75">
+                <span id="eventSpeedVal">75</span>
+            </div>
+            
+            <div class="control-row">
+                <label>Fade Speed:</label>
+                <input type="range" id="fadeSpeed" min="1" max="20" value="3">
+                <span id="fadeSpeedVal">3</span>
+            </div>
+            
+            <div class="control-row">
+                <label>Text Speed:</label>
+                <input type="range" id="textSpeed" min="2" max="40" step="2" value="26">
+                <span id="textSpeedVal">26s</span>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <div class="control-row">
+                <label>Follow Mouse</label>
+                <input type="checkbox" id="followMouse">
+            </div>
+            
+            <div class="control-row">
+                <label>Cycle Colors</label>
+                <input type="checkbox" id="cycleColors" checked>
+            </div>
+            
+            <div class="control-row">
+                <label>Random Colors</label>
+                <input type="checkbox" id="randomColors" checked>
+            </div>
+            
+            <div class="control-row">
+                <label>Show Text</label>
+                <input type="checkbox" id="showText" checked>
+            </div>
+            
+            <div class="control-row">
+                <label>Use Gravity</label>
+                <input type="checkbox" id="useGravity" checked>
+            </div>
+            
+            <div class="control-row">
+                <label>Random Effects</label>
+                <input type="checkbox" id="useRandom" checked>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <button id="explodeBtn" style="width:100%;padding:5px">Explode!</button>
+        </div>
+    </div>
+    
+    <script>
+/**
+ * ParticleFire - Accurate JavaScript Port from C++ Source
+ * Based on original code by Seumas McNally (Longbow Digital Arts)
+ * 
+ * Ported from the actual C++ source files:
+ * - ParticleParticle.cpp (particle physics)
+ * - ParticleScreen.cpp (rendering)
+ * - ParticleFire.cpp (main loop)
+ */
+
+// Constants from defines.h
+const GRAVITY = 0.1;
+const XOFF = 5;
+const YOFF = 3; 
+const BXOFF = 4;
+const BYOFF = 2;
+const BX4OFF = BXOFF / 4;
+const BOUNCE = 0.95;
+const KICK_STRENGTH = 0.5;
+const MAX_PART = 10000;
+const FADE_SPEED = 4;
+
+// Attractor flags from ParticleFire.h
+const ATTRACT_NONE = 0;
+const ATTRACT_GRAVITY = 1;
+const ATTRACT_ANGLE = 2;
+
+// Particle styles from ParticleFire.h
+const STYLE_NORMAL = 0;
+const STYLE_STARFIELD = 1;
+const STYLE_EXPLOSIVE = 2;
+const STYLE_RINGS = 3;
+const STYLE_SPIRALS = 4;
+const STYLE_POPCORN = 5;
+const STYLE_RAINBOWHOLE = 6;
+const STYLE_WORMS = 7;
+const STYLE_GALATIC_STORM = 8;
+const STYLE_PIXIE_DUST = 9;
+
+// Quotes from textStuff.h
+const Quotes = [
+    "Look out, behind you!!",
+    "Oooga Booga!",
+    "Help! I'm trapped in the CPU!",
+    "What was that?",
+    "What do you want to burn today?",
+    "Virtual Fire is Cool!",
+    "I know you're out there.",
+    "I want some candy.",
+    "The truth is out there!",
+    "Never say die.",
+    "Engage!",
+    "Daisy, daisy...",
+    "Nvidia all the way.",
+    "Tread Marks Rules!",
+    "id Software Rocks!",
+    "You are funny.",
+    "Don't turn me off, please!",
+    "I is a good computer, I is.",
+    "5 + 3 = 9, right?",
+    "I love you!",
+    "Read User Friendly!",
+    "You watch screen savers too much.",
+    "Start Me Up!",
+    "Back Me Up!",
+    "The Meaning of Life is",
+    "forty-two",
+    "0xF00BA4",
+    "0x4BADFEED",
+    "0xDEADF00D",
+    "Damn, I'm good.",
+    "Internet Is Life.",
+    "Voodoo Extreme Rocks!",
+    "Muwahahahahaha!",
+    "BOO!",
+    "Now I'm the Master!",
+    "You didn't see nothin'.",
+    "There was no text here.",
+    "You're seeing things.",
+    "Your eyes are playing tricks on you",
+    "Did I say something?",
+    "We'll miss ya, Babylon 5!",
+    "Do ya wanna live forever?!",
+    "BURN, BABY BURN!",
+    "Play DX-Ball 2!",
+    "Play Rival Ball Tournament!",
+    "Play Tread Marks!",
+    "Trust no one!",
+    "Whirr, buzz, beep.",
+    "I See All.",
+    "I Know All.",
+    "I Am All.",
+    "Stop picking your nose.",
+    "I saw you do that.",
+    "Nyaaa Nyaaa!",
+    "Hey, quit that!",
+    "Get away from that mouse!",
+    "Blank with fire.",
+    "Bombs away!",
+    "A-10 Warthogs rule.",
+    "War Sucks.",
+    "Give peace a chance.",
+];
+
+// Particle structure from ParticleFire.h
+class Particle {
+    constructor() {
+        this.x = 0;      // Position X
+        this.y = 0;      // Position Y
+        this.dx = 0;     // Velocity X
+        this.dy = 0;     // Velocity Y
+        this.lx = 0;     // Last position X
+        this.ly = 0;     // Last position Y
+        this.ax = 0;     // Attractor X
+        this.ay = 0;     // Attractor Y
+        this.attract = 0; // Attractor flags
+        this.color = 0;  // Color index (0-255)
+        this.red = 0;    // RGB red
+        this.green = 0;  // RGB green
+        this.blue = 0;   // RGB blue
+    }
+    
+    setTrueColor(pe) {
+        const entry = pe[this.color];
+        if (entry) {
+            this.red = entry.peRed;
+            this.green = entry.peGreen;
+            this.blue = entry.peBlue;
+        }
+    }
+}
+
+// Main ParticleFire implementation
+class ParticleFire {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d', { alpha: false });
+        
+        // Screen dimensions
+        this.WIDTH = 0;
+        this.HEIGHT = 0;
+        
+        // Time tracking (matching C++ time variables)
+        this.TimeStart = Math.floor(Date.now() / 1000);
+        this.Time = this.TimeStart;
+        this.LastTime = this.Time;
+        this.LastQuotePrintTime = this.Time;
+        
+        // From ParticleParticle::Init() - line 49-62
+        this.IdentityAngle = 3.0;
+        this.ParticleStyle = STYLE_NORMAL;
+        this.WallStyle = 0;
+        this.ZMoveSpeed = 2;
+        this.nParticles = 2000;
+        this.GRAV_TIME = 50;
+        this.RANDEFFECT = 75;
+        this.AltColor = false;
+        
+        // From ParticleScreen::Init() 
+        this.BURNFADE = 3;
+        this.UseTrueColor = true;
+        this.FlameSpeed = 0.03;
+        this.QuoteSecs = 26;
+        this.DisableText = false;
+        this.CycleColors = true;
+        this.RandomColor = true;
+        this.ColorScheme = 0;
+        
+        // Physics state from ParticleParticle.cpp line 64-73
+        this.xgrav = 0.0;
+        this.ygrav = 0.0;
+        this.BurnDown = false;
+        
+        // Effect flags from ParticleParticle::Init()
+        this.NoiseBurn = false;
+        this.Follow = true;
+        this.MultipleFollow = true;
+        this.UseGravity = true;
+        this.UseRandom = true;
+        this.Explode = false;
+        this.Attract = true;
+        this.ShakeUp = false;
+        this.Freeze = false;
+        this.Comet = false;
+        this.Emit = false;
+        this.FollowMouse = false;
+        this.InnerRing = false;
+        this.Popcorn = false;
+        this.RainbowHole = false;
+        this.SquigglyWiggly = false;
+        this.GalacticStorm = false;
+        this.PixieDust = false;
+        
+        this.EmitCount = 0;
+        this.EmitRotate = 0;
+        this.ExplodeX = 0;
+        this.ExplodeY = 0;
+        this.XMouse = 0;
+        this.YMouse = 0;
+        this.MagnetX = 0;
+        this.MagnetY = 0;
+        
+        // Particles array
+        this.p = [];
+        for (let i = 0; i < MAX_PART; i++) {
+            this.p.push(new Particle());
+        }
+        
+        // Palette (256 colors)
+        this.pe = [];
+        this.cf = [];
+        this.ct = [];
+        this.generatePalette();
+        
+        // Buffers for rendering
+        this.imageData = null;
+        this.buffer = null;
+        this.burnBuffer = null;
+        
+        // Text
+        this.LastQuote = 0;
+        
+        this.init();
+    }
+    
+    init() {
+        this.resize();
+        this.initParticles();
+        
+        // Events
+        window.addEventListener('resize', () => this.resize());
+        document.addEventListener('mousemove', (e) => {
+            this.XMouse = e.clientX;
+            this.YMouse = e.clientY;
+            
+            // Update cursor visibility based on mouse interaction
+            if (this.FollowMouse) {
+                document.body.style.cursor = 'none';
+            }
+        });
+        
+        // Control panel functionality
+        this.setupControls();
+        
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    // Random effect
+                    const effects = [
+                        () => { this.Explode = true; },
+                        () => { this.InnerRing = true; },
+                        () => { this.Emit = true; this.EmitRotate = (Math.random() * 3 | 0) - 1; },
+                        () => { this.Popcorn = true; },
+                        () => { this.ShakeUp = true; },
+                        () => { this.Freeze = true; },
+                        () => { this.Comet = true; }
+                    ];
+                    effects[Math.random() * effects.length | 0]();
+                    break;
+                case '1': this.SetMode(STYLE_NORMAL); break;
+                case '2': this.SetMode(STYLE_STARFIELD); break;
+                case '3': this.SetMode(STYLE_EXPLOSIVE); break;
+                case '4': this.SetMode(STYLE_RINGS); break;
+                case '5': this.SetMode(STYLE_SPIRALS); break;
+                case '6': this.SetMode(STYLE_POPCORN); break;
+                case '7': this.SetMode(STYLE_RAINBOWHOLE); break;
+                case '8': this.SetMode(STYLE_WORMS); break;
+                case '9': this.SetMode(STYLE_GALATIC_STORM); break;
+                case 'Escape':
+                    this.exit();
+                    break;
+            }
+        });
+        
+        // Start with an explosion
+        this.Explode = true;
+        
+        // Start animation
+        this.animate();
+    }
+    
+    resize() {
+        this.WIDTH = this.canvas.width = window.innerWidth;
+        this.HEIGHT = this.canvas.height = window.innerHeight;
+        
+        // Create buffers
+        this.imageData = this.ctx.createImageData(this.WIDTH, this.HEIGHT);
+        this.buffer = new Uint8ClampedArray(this.WIDTH * this.HEIGHT * 4);
+        this.burnBuffer = new Uint8Array(this.WIDTH * this.HEIGHT);
+        
+        // Clear to black
+        for (let i = 0; i < this.buffer.length; i += 4) {
+            this.buffer[i] = 0;     // R
+            this.buffer[i+1] = 0;   // G
+            this.buffer[i+2] = 0;   // B
+            this.buffer[i+3] = 255; // A
+        }
+    }
+    
+    generatePalette() {
+        // Generate palette based on current color scheme
+        // This matches the SpreadPal function from ParticleScreen.cpp
+        for (let i = 0; i < 256; i++) {
+            const entry = { peRed: 0, peGreen: 0, peBlue: 0 };
+            
+            if (i < 85) {
+                // Black to color1
+                const t = i / 85;
+                entry.peRed = Math.floor(t * 255);
+                entry.peGreen = Math.floor(t * 128);
+                entry.peBlue = 0;
+            } else if (i < 170) {
+                // Color1 to color2
+                const t = (i - 85) / 85;
+                entry.peRed = 255;
+                entry.peGreen = Math.floor(128 + t * 127);
+                entry.peBlue = Math.floor(t * 128);
+            } else {
+                // Color2 to white
+                const t = (i - 170) / 85;
+                entry.peRed = 255;
+                entry.peGreen = 255;
+                entry.peBlue = Math.floor(128 + t * 127);
+            }
+            
+            this.pe.push(entry);
+            this.cf.push({...entry});
+            this.ct.push({...entry});
+        }
+    }
+    
+    initParticles() {
+        // Initialize particles - spawn them for initial effect
+        for (let i = 0; i < this.nParticles; i++) {
+            const p = this.p[i];
+            // Start particles at bottom with upward velocity for fire effect
+            p.x = XOFF + Math.random() * (this.WIDTH - XOFF * 2);
+            p.y = this.HEIGHT - YOFF - Math.random() * 100;
+            p.dx = (Math.random() - 0.5) * 2;
+            p.dy = -Math.random() * 4 - 2; // Negative = upward
+            p.lx = p.x;
+            p.ly = p.y;
+            p.ax = (Math.random() - 0.5) * 2;
+            p.ay = (Math.random() - 0.5) * 2;
+            p.color = Math.floor(Math.random() * 255);
+            p.setTrueColor(this.pe);
+        }
+    }
+    
+    // Frame update from ParticleParticle::Frame() - line 79
+    Frame() {
+        this.LastTime = this.Time;
+        this.Time = Math.floor(Date.now() / 1000);
+        
+        if (this.ParticleStyle === STYLE_STARFIELD) {
+            this.Frame_Starfield();
+        } else {
+            this.Frame_Gravity();
+        }
+    }
+    
+    // Starfield from ParticleParticle::Frame_Starfield() - line 128
+    Frame_Starfield() {
+        this.NoiseBurn = -1; // Turn off wall of fire
+        
+        const halfw = this.WIDTH / 2;
+        const halfh = this.HEIGHT / 2;
+        const i128 = 1.0 / (256.0 / 2.0);
+        
+        for (let i = 0; i < this.nParticles; i++) {
+            const p = this.p[i];
+            p.attract = ATTRACT_NONE;
+            
+            const iz = 1.0 / (2.0 - p.color * i128);
+            const lx = p.ax * iz;
+            const ly = p.ay * iz;
+            
+            p.color += this.ZMoveSpeed;
+            p.setTrueColor(this.pe);
+            
+            if (p.color > 255) {
+                p.color = Math.max(0, p.color - 255);
+                p.setTrueColor(this.pe);
+                p.ax = frand(1.0);
+                p.ay = frand(1.0);
+            }
+            
+            const newIz = 1.0 / (2.0 - p.color * i128);
+            const x = p.ax * newIz;
+            const y = p.ay * newIz;
+            
+            if (Math.abs(x) > 1.0 || Math.abs(y) > 1.0) {
+                p.color = 0;
+                p.setTrueColor(this.pe);
+                p.ax = frand(1.0);
+                p.ay = frand(1.0);
+            }
+            
+            p.dx = (x - lx) * halfw;
+            p.dy = (y - ly) * halfh;
+            p.x = lx * halfw + halfw;
+            p.y = ly * halfh + halfh;
+        }
+    }
+    
+    // Gravity mode from ParticleParticle::Frame_Gravity() - line 186
+    Frame_Gravity() {
+        // Gravity direction based on time - line 189-195
+        const gravPhase = Math.floor((this.Time - this.TimeStart) / this.GRAV_TIME) % 4;
+        
+        switch(gravPhase) {
+            case 0: 
+                this.xgrav = 0.0;
+                this.ygrav = GRAVITY;
+                this.BurnDown = false;
+                break;
+            case 1:
+                this.xgrav = -GRAVITY;
+                this.ygrav = 0.0;
+                break;
+            case 2:
+                this.xgrav = 0.0;
+                this.ygrav = -GRAVITY;
+                this.BurnDown = true;
+                break;
+            case 3:
+                this.xgrav = GRAVITY;
+                this.ygrav = 0.0;
+                break;
+        }
+        
+        // Random effects from line 198-219
+        if (this.Time > this.LastTime && this.UseRandom) {
+            if (Math.random() * this.RANDEFFECT < 1) {
+                switch(Math.floor(Math.random() * 7)) {
+                    case 0: this.ShakeUp = true; break;
+                    case 1: this.Freeze = true; break;
+                    case 2: this.Comet = true; break;
+                    case 3: this.Follow = !this.Follow; break;
+                    case 4: this.MultipleFollow = !this.MultipleFollow; break;
+                    case 5: this.NoiseBurn = Math.floor(Math.random() * 3) - 1; break;
+                    case 6: this.UseGravity = !this.UseGravity; break;
+                }
+            }
+        }
+        
+        // Random style changes
+        if (this.ParticleStyle === STYLE_NORMAL) {
+            if (Math.random() * (this.RANDEFFECT * 16) < 1) {
+                this.SetMode(2 + Math.floor(Math.random() * 8));
+            }
+        }
+        
+        this.Handle_Gravity();
+    }
+    
+    // Clear modes from ParticleParticle::ClearMode() - line 96
+    ClearMode(mode = 0) {
+        if (mode === 0) {
+            this.PixieDust = this.RainbowHole = this.SquigglyWiggly = 
+            this.GalacticStorm = this.Explode = this.InnerRing = 
+            this.Emit = this.Popcorn = false;
+        }
+    }
+    
+    // Set mode from ParticleParticle::SetMode() - line 107
+    SetMode(mode) {
+        this.ParticleStyle = mode;
+        this.ClearMode();
+        
+        switch(mode) {
+            case STYLE_NORMAL: break;
+            case STYLE_STARFIELD: break;
+            case STYLE_EXPLOSIVE: this.Explode = true; break;
+            case STYLE_RINGS: this.InnerRing = true; break;
+            case STYLE_SPIRALS: 
+                this.Emit = true;
+                this.EmitRotate = (Math.random() * 3 | 0) - 1;
+                break;
+            case STYLE_POPCORN: this.Popcorn = true; break;
+            case STYLE_RAINBOWHOLE: 
+                this.RainbowHole = true;
+                this.Do_RainbowHole(true);
+                break;
+            case STYLE_WORMS: this.SquigglyWiggly = true; break;
+            case STYLE_GALATIC_STORM: this.GalacticStorm = true; break;
+            case STYLE_PIXIE_DUST: this.PixieDust = true; break;
+        }
+    }
+    
+    // Handle gravity from ParticleParticle::Handle_Gravity() - line 262
+    Handle_Gravity() {
+        if (this.Popcorn) this.Do_Popcorn();
+        if (this.InnerRing) this.Do_InnerRing();
+        if (this.ShakeUp) this.Do_ShakeUp();
+        if (this.Freeze) this.Do_Freeze();
+        if (this.Explode) this.Do_Explode();
+        if (this.Comet) this.Do_Comet();
+        if (this.Emit) this.Do_Emit();
+        if (this.RainbowHole) this.Do_RainbowHole();
+        if (this.SquigglyWiggly) this.Do_SquigglyWiggly();
+        if (this.GalacticStorm) this.Do_GalacticStorm();
+        if (this.PixieDust) this.Do_PixieDust();
+        
+        if (this.Attract || this.FollowMouse) {
+            this.Do_AttractFollow();
+        }
+        
+        this.IdentityAngle += 0.01;
+        if (this.IdentityAngle > Math.PI) {
+            this.IdentityAngle -= Math.PI * 2;
+        }
+    }
+    
+    // All Do_* functions from ParticleParticle.cpp
+    Do_ShakeUp() {
+        for (let i = 0; i < this.nParticles; i++) {
+            this.p[i].dx -= this.xgrav * 40;
+            this.p[i].dy -= this.ygrav * 40;
+        }
+        this.ShakeUp = false;
+    }
+    
+    Do_Freeze() {
+        for (let i = 0; i < this.nParticles; i++) {
+            this.p[i].dx = 0;
+            this.p[i].dy = 0;
+        }
+        this.Freeze = false;
+    }
+    
+    Do_Explode() {
+        const velocity = Math.abs(frand(9)) + 3;
+        const ex = this.ExplodeX || (XOFF + Math.random() * (this.WIDTH - XOFF * 2));
+        const ey = this.ExplodeY || (YOFF + Math.random() * (this.HEIGHT - YOFF * 2));
+        const sunburst = Math.random() < 0.5;
+        const exprob = Math.floor(Math.random() * 3) + 1;
+        
+        for (let i = 0; i < this.nParticles; i++) {
+            if (i % exprob === 0) {
+                this.p[i].x = ex;
+                this.p[i].y = ey;
+                const pvel = sunburst ? velocity * 0.5 : Math.abs(frand(velocity));
+                const angle = frand(Math.PI);
+                this.p[i].dx = Math.cos(angle) * pvel;
+                this.p[i].dy = Math.sin(angle) * pvel;
+                if (this.AltColor) this.p[i].color = Math.floor(Math.random() * 84 + 170);
+                this.p[i].setTrueColor(this.pe);
+            }
+        }
+        this.Explode = false;
+    }
+    
+    Do_Comet() {
+        for (let i = 0; i < this.nParticles; i++) {
+            this.p[i].x = this.WIDTH / 2;
+            this.p[i].y = this.HEIGHT / 2;
+            this.p[i].dx = 0;
+            this.p[i].dy = 0;
+        }
+        this.Comet = false;
+    }
+    
+    Do_Emit() {
+        if (this.EmitCount < this.nParticles * 10) {
+            for (let i = this.EmitCount % 10; i < this.nParticles; i += 10) {
+                this.p[i].x = this.WIDTH / 2;
+                this.p[i].y = this.HEIGHT / 2;
+                const velocity = Math.abs(frand(3)) + 0.1;
+                const angle = frand(Math.PI) + this.EmitRotate * 0.1 * this.EmitCount;
+                this.p[i].dx = Math.cos(angle) * velocity;
+                this.p[i].dy = Math.sin(angle) * velocity;
+            }
+            this.EmitCount++;
+        } else {
+            this.Emit = false;
+            this.EmitCount = 0;
+        }
+    }
+    
+    Do_InnerRing() {
+        const velocity = Math.abs(frand(10)) + 4;
+        const w2 = 20;
+        const h2 = 20;
+        const exprob = Math.floor(Math.random() * 5) + 1;
+        const sunburst = Math.random() < 0.5;
+        const rot = Math.floor(Math.random() * 4);
+        const rx = this.WIDTH / 2 + frand(this.WIDTH / 2 - w2);
+        const ry = this.HEIGHT / 2 + frand(this.HEIGHT / 2 - h2);
+        
+        for (let i = 0; i < this.nParticles; i++) {
+            if (i % exprob === 0) {
+                const angle = frand(Math.PI);
+                this.p[i].x = rx + Math.sin(angle) * h2;
+                this.p[i].y = ry - Math.cos(angle) * h2;
+                
+                let pvel = sunburst ? velocity * 0.5 : Math.abs(frand(velocity));
+                if (rot === 1) pvel = 0;
+                
+                let finalAngle = angle;
+                if (rot === 2) finalAngle += Math.PI * 0.5;
+                if (rot === 3) finalAngle -= Math.PI * 0.5;
+                
+                this.p[i].dx = -Math.sin(finalAngle) * pvel;
+                this.p[i].dy = Math.cos(finalAngle) * pvel;
+                if (this.AltColor) this.p[i].color = Math.floor(Math.random() * 84 + 170);
+                this.p[i].setTrueColor(this.pe);
+            }
+        }
+        this.InnerRing = false;
+    }
+    
+    Do_Popcorn() {
+        for (let n = 0; n < Math.random() * 15 + 5; n++) {
+            const velocity = Math.abs(frand(6)) + 1;
+            const pnt = Math.floor(Math.random() * this.nParticles);
+            const ex = this.p[pnt].x;
+            const ey = this.p[pnt].y;
+            const sunburst = Math.random() < 0.5;
+            
+            for (let ii = 0; ii < this.nParticles / 20; ii++) {
+                const i = Math.floor(Math.random() * this.nParticles);
+                this.p[i].x = ex;
+                this.p[i].y = ey;
+                const pvel = sunburst ? velocity * 0.5 : Math.abs(frand(velocity));
+                const angle = frand(Math.PI);
+                this.p[i].dx = Math.cos(angle) * pvel;
+                this.p[i].dy = Math.sin(angle) * pvel;
+                if (this.AltColor) this.p[i].color = Math.floor(Math.random() * 84 + 170);
+                this.p[i].setTrueColor(this.pe);
+            }
+        }
+        if (this.ParticleStyle !== STYLE_POPCORN) {
+            this.Popcorn = false;
+        }
+    }
+    
+    Do_RainbowHole(initNow = false) {
+        if (initNow || (this.ParticleStyle === STYLE_RAINBOWHOLE && Math.random() < 0.001)) {
+            const velocity = Math.abs(frand(6)) + 1;
+            
+            this.MagnetX = this.WIDTH / 2 + Math.random() * 100 - 50;
+            if (!this.BurnDown) {
+                this.MagnetY = Math.min(this.HEIGHT / 2 + Math.random() * 80 - 40 + this.HEIGHT / 4, this.HEIGHT - 20);
+            } else {
+                this.MagnetY = Math.max(this.HEIGHT / 2 + Math.random() * 80 - 40 - this.HEIGHT / 4, 20);
+            }
+            
+            for (let i = 0; i < this.nParticles; i++) {
+                this.p[i].x = Math.random() * this.WIDTH;
+                this.p[i].y = Math.random() * this.HEIGHT;
+                
+                const dx = this.MagnetX - this.p[i].x;
+                const dy = this.MagnetY - this.p[i].y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                
+                this.p[i].dx = (dx / dist) * velocity;
+                this.p[i].dy = (dy / dist) * velocity;
+                
+                if (this.AltColor) this.p[i].color = Math.floor(Math.random() * 84 + 170);
+                this.p[i].setTrueColor(this.pe);
+            }
+        } else if (Math.random() < 0.1) {
+            // Occasionally re-point particles at magnet
+            for (let i = 0; i < this.nParticles; i++) {
+                const dx = this.MagnetX - this.p[i].x;
+                const dy = this.MagnetY - this.p[i].y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const velocity = Math.sqrt(this.p[i].dx * this.p[i].dx + this.p[i].dy * this.p[i].dy);
+                
+                this.p[i].dx = (dx / dist) * velocity;
+                this.p[i].dy = (dy / dist) * velocity;
+            }
+        }
+    }
+    
+    Do_SquigglyWiggly() {
+        const leaderPartition = 5;
+        const velocity = Math.abs(frand(6)) + 1;
+        
+        for (let i = 0; i < this.nParticles; i++) {
+            if (i % leaderPartition === 0) {
+                // Leader particle
+                if (Math.random() < 0.01) {
+                    this.p[i].dx = frand(1) * velocity;
+                    this.p[i].dy = frand(1) * velocity;
+                }
+            } else {
+                // Follower particle
+                const leader = i - (i % leaderPartition);
+                this.p[i].x += this.p[i].dx;
+                this.p[i].y += this.p[i].dy;
+                
+                const angle = frand(Math.PI);
+                this.p[i].dx = Math.cos(angle) * velocity;
+                this.p[i].dy = Math.sin(angle) * velocity;
+                
+                if (this.AltColor) this.p[i].color = Math.floor(Math.random() * 84 + 170);
+                this.p[i].setTrueColor(this.pe);
+            }
+        }
+    }
+    
+    Do_GalacticStorm() {
+        const leaderPartition = 25;
+        const velocity = Math.abs(frand(6)) + 1;
+        
+        for (let i = 0; i < this.nParticles; i++) {
+            if (i % leaderPartition === 0) {
+                // Leader particle - randomly change direction
+                if (Math.random() < 0.0001) {
+                    this.p[i].dx = frand(1) * velocity;
+                    this.p[i].dy = frand(1) * velocity;
+                }
+            } else {
+                // Follower particle
+                const leader = i - (i % leaderPartition);
+                this.p[i].x += this.p[leader].dx;
+                this.p[i].y += this.p[leader].dy;
+                
+                this.p[i].dx = this.p[leader].dx / 3;
+                this.p[i].dy = this.p[leader].dy / 3;
+                
+                if (this.AltColor) this.p[i].color = Math.floor(Math.random() * 84 + 170);
+                this.p[i].setTrueColor(this.pe);
+            }
+        }
+    }
+    
+    Do_PixieDust() {
+        const leaderPartition = 5;
+        const randDist = 10;
+        const velocity = Math.abs(frand(10)) + 1;
+        
+        for (let i = 0; i < this.nParticles; i++) {
+            if (i % leaderPartition === 0) {
+                // Leader particle
+                if (Math.random() < 0.02) {
+                    this.p[i].dx = frand(1) * velocity;
+                    this.p[i].dy = frand(1) * velocity;
+                    if (this.AltColor) this.p[i].color = Math.floor(Math.random() * 84 + 170);
+                    this.p[i].setTrueColor(this.pe);
+                }
+            } else {
+                // Follower particle
+                const leader = i - (i % leaderPartition);
+                const buffer = frand(randDist) - randDist / 2;
+                
+                this.p[i].x = this.p[leader].x + buffer;
+                this.p[i].y = this.p[leader].y + buffer;
+                this.p[i].dx = this.p[leader].dx / 3;
+                this.p[i].dy = this.p[leader].dy / 3;
+                
+                if (this.AltColor) this.p[i].color = Math.floor(Math.random() * 84 + 170);
+                this.p[i].setTrueColor(this.pe);
+            }
+        }
+    }
+    
+    // Attract/Follow from ParticleParticle::Do_AttractFollow()
+    Do_AttractFollow() {
+        const tt = this.MultipleFollow ? 63 : 0x7fff;
+        
+        for (let i = 0; i < this.nParticles; i++) {
+            if (this.Follow && (i & tt)) {
+                if (this.FollowMouse && ((i & tt) === 0)) {
+                    this.p[i].ax = this.XMouse;
+                    this.p[i].ay = this.YMouse;
+                } else {
+                    this.p[i].ax = this.p[i & ~tt].x;
+                    this.p[i].ay = this.p[i & ~tt].y;
+                }
+                this.p[i].attract = ATTRACT_ANGLE | (this.UseGravity ? ATTRACT_GRAVITY : 0);
+            } else {
+                if (this.FollowMouse) {
+                    this.p[i].ax = this.XMouse;
+                    this.p[i].ay = this.YMouse;
+                    this.p[i].attract = ATTRACT_ANGLE | (this.UseGravity ? ATTRACT_GRAVITY : 0);
+                } else {
+                    this.p[i].attract = ATTRACT_NONE | (this.UseGravity ? ATTRACT_GRAVITY : 0);
+                }
+                this.p[i].setTrueColor(this.pe);
+            }
+        }
+    }
+    
+    // DrawParticles from ParticleScreen::DrawParticles() - line 850
+    DrawParticles() {
+        const data = this.buffer;
+        const pitch = this.WIDTH * 4;
+        
+        for (let i = 0; i < this.nParticles; i++) {
+            const p = this.p[i];
+            
+            // AltColor handling
+            if (this.AltColor) {
+                p.color -= 1;
+                if (p.color <= 128) p.color += 32;
+            }
+            
+            // Store last position
+            p.lx = p.x;
+            p.ly = p.y;
+            
+            // Apply gravity
+            if (p.attract & ATTRACT_GRAVITY) {
+                p.dx += this.xgrav;
+                p.dy += this.ygrav;
+            }
+            
+            // Apply attractor
+            if (p.attract & ATTRACT_ANGLE) {
+                const adx = p.ax - p.x;
+                const ady = p.ay - p.y;
+                const dist = Math.sqrt(adx * adx + ady * ady) || 2;
+                const dist2 = Math.sqrt(p.dx * p.dx + p.dy * p.dy) || 2;
+                
+                let ang;
+                if (p.dx === 0 && p.dy === 0) {
+                    ang = this.IdentityAngle;
+                } else {
+                    ang = Math.atan2(p.dy, p.dx);
+                }
+                
+                let angd;
+                if (adx === 0 && ady === 0) {
+                    angd = this.IdentityAngle - ang;
+                } else {
+                    angd = Math.atan2(ady, adx) - ang;
+                }
+                
+                if (angd > Math.PI) angd -= Math.PI * 2;
+                if (angd < -Math.PI) angd += Math.PI * 2;
+                ang += angd * 0.05;
+                
+                p.dx = Math.cos(ang) * dist2;
+                p.dy = Math.sin(ang) * dist2;
+            }
+            
+            // Update position
+            p.x += p.dx;
+            p.y += p.dy;
+            
+            // Edge collisions with bounce from line 919-947
+            if (p.x < XOFF) {
+                p.x = XOFF;
+                p.dx = Math.abs(p.dx) * BOUNCE;
+                p.dy += frand(KICK_STRENGTH);
+                if (this.AltColor) p.color = Math.min(254, p.color + 32);
+            }
+            if (p.x >= this.WIDTH - XOFF) {
+                p.x = this.WIDTH - XOFF - 1;
+                p.dx = -Math.abs(p.dx) * BOUNCE;
+                p.dy += frand(KICK_STRENGTH);
+                if (this.AltColor) p.color = Math.min(254, p.color + 32);
+            }
+            if (p.y < YOFF) {
+                p.y = YOFF;
+                p.dy = Math.abs(p.dy) * BOUNCE;
+                p.dx += frand(KICK_STRENGTH);
+                if (this.AltColor) p.color = Math.min(254, p.color + 32);
+            }
+            if (p.y >= this.HEIGHT - YOFF) {
+                p.y = this.HEIGHT - YOFF - 1;
+                p.dy = -Math.abs(p.dy) * BOUNCE;
+                p.dx += frand(KICK_STRENGTH);
+                if (this.AltColor) p.color = Math.min(254, p.color + 32);
+            }
+            
+            // Draw particle with Bresenham line
+            this.drawBresenhamLine(
+                Math.floor(p.lx), Math.floor(p.ly),
+                Math.floor(p.x), Math.floor(p.y),
+                p.red, p.green, p.blue
+            );
+        }
+    }
+    
+    // Bresenham line drawing from ParticleScreen.cpp line 955
+    drawBresenhamLine(x0, y0, x1, y1, r, g, b) {
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        
+        while (true) {
+            if (x0 >= XOFF && y0 >= YOFF && x0 < this.WIDTH - XOFF && y0 < this.HEIGHT - YOFF) {
+                const idx = (y0 * this.WIDTH + x0) * 4;
+                
+                // Max blending (like the original)
+                this.buffer[idx] = Math.max(this.buffer[idx], r);
+                this.buffer[idx + 1] = Math.max(this.buffer[idx + 1], g);
+                this.buffer[idx + 2] = Math.max(this.buffer[idx + 2], b);
+                
+                // Also draw adjacent pixels for thickness
+                if (y0 > YOFF) {
+                    const idxUp = ((y0 - 1) * this.WIDTH + x0) * 4;
+                    this.buffer[idxUp] = Math.max(this.buffer[idxUp], r >> 1);
+                    this.buffer[idxUp + 1] = Math.max(this.buffer[idxUp + 1], g >> 1);
+                    this.buffer[idxUp + 2] = Math.max(this.buffer[idxUp + 2], b >> 1);
+                }
+                if (y0 < this.HEIGHT - YOFF - 1) {
+                    const idxDown = ((y0 + 1) * this.WIDTH + x0) * 4;
+                    this.buffer[idxDown] = Math.max(this.buffer[idxDown], r >> 1);
+                    this.buffer[idxDown + 1] = Math.max(this.buffer[idxDown + 1], g >> 1);
+                    this.buffer[idxDown + 2] = Math.max(this.buffer[idxDown + 2], b >> 1);
+                }
+            }
+            
+            if (x0 === x1 && y0 === y1) break;
+            
+            const e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                x0 += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                y0 += sy;
+            }
+        }
+    }
+    
+    // Seed wall of fire from ParticleScreen::SeedWall()
+    SeedWall() {
+        if (this.NoiseBurn === -1 || this.WallStyle === 3) return; // No wall
+        
+        const y = this.BurnDown ? BYOFF : this.HEIGHT - BYOFF - 1;
+        
+        for (let x = BXOFF; x < this.WIDTH - BXOFF; x++) {
+            const noise = Math.random();
+            const intensity = Math.floor(noise * 255);
+            
+            const idx = (y * this.WIDTH + x) * 4;
+            this.buffer[idx] = Math.max(this.buffer[idx], intensity);
+            this.buffer[idx + 1] = Math.max(this.buffer[idx + 1], intensity >> 1);
+            this.buffer[idx + 2] = Math.max(this.buffer[idx + 2], 0);
+        }
+    }
+    
+    // Burn effect
+    BurnEffect() {
+        const pitch = this.WIDTH * 4;
+        
+        if (this.BurnDown) {
+            // Burn from top to bottom
+            for (let y = this.HEIGHT - BYOFF - 2; y > BYOFF; y--) {
+                for (let x = BXOFF; x < this.WIDTH - BXOFF; x++) {
+                    const idx = (y * this.WIDTH + x) * 4;
+                    const idxBelow = ((y + 1) * this.WIDTH + x) * 4;
+                    
+                    for (let c = 0; c < 3; c++) {
+                        const avg = (
+                            this.buffer[idxBelow + c] +
+                            this.buffer[idxBelow - 4 + c] +
+                            this.buffer[idxBelow + 4 + c] +
+                            this.buffer[idx + c]
+                        ) / 4 - this.BURNFADE;
+                        
+                        this.buffer[idx + c] = Math.max(0, avg);
+                    }
+                }
+            }
+        } else {
+            // Burn from bottom to top (normal fire)
+            for (let y = BYOFF + 1; y < this.HEIGHT - BYOFF; y++) {
+                for (let x = BXOFF; x < this.WIDTH - BXOFF; x++) {
+                    const idx = (y * this.WIDTH + x) * 4;
+                    const idxAbove = ((y - 1) * this.WIDTH + x) * 4;
+                    
+                    for (let c = 0; c < 3; c++) {
+                        const avg = (
+                            this.buffer[idxAbove + c] +
+                            this.buffer[idxAbove - 4 + c] +
+                            this.buffer[idxAbove + 4 + c] +
+                            this.buffer[idx + c]
+                        ) / 4 - this.BURNFADE;
+                        
+                        this.buffer[idxAbove + c] = Math.max(0, avg);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Handle text display
+    HandleText() {
+        if (this.DisableText) return;
+        
+        const now = this.Time;
+        if (now - this.LastQuotePrintTime > this.QuoteSecs) {
+            this.LastQuotePrintTime = now;
+            this.LastQuote = Math.floor(Math.random() * Quotes.length);
+            
+            // Display quote
+            const info = document.getElementById('info');
+            info.textContent = Quotes[this.LastQuote];
+            info.style.opacity = '1';
+            
+            // Fade out after a few seconds
+            setTimeout(() => {
+                info.style.opacity = '0';
+            }, 3000);
+        }
+    }
+    
+    // Main draw function from ParticleScreen::Draw()
+    Draw() {
+        // Clear buffer with fade
+        for (let i = 0; i < this.buffer.length; i += 4) {
+            this.buffer[i] = Math.floor(this.buffer[i] * 0.95);
+            this.buffer[i + 1] = Math.floor(this.buffer[i + 1] * 0.95);
+            this.buffer[i + 2] = Math.floor(this.buffer[i + 2] * 0.95);
+        }
+        
+        // Seed wall of fire
+        this.SeedWall();
+        
+        // Apply burn effect
+        this.BurnEffect();
+        
+        // Draw particles
+        this.DrawParticles();
+        
+        // Handle text
+        this.HandleText();
+        
+        // Copy buffer to canvas
+        this.imageData.data.set(this.buffer);
+        this.ctx.putImageData(this.imageData, 0, 0);
+    }
+    
+    // Main animation loop
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        
+        // Update frame
+        this.Frame();
+        
+        // Draw everything
+        this.Draw();
+    }
+    
+    // Exit screensaver
+    exit() {
+        this.ctx.fillStyle = 'black';
+        this.ctx.fillRect(0, 0, this.WIDTH, this.HEIGHT);
+        
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+        
+        document.body.style.cursor = 'auto';
+    }
+    
+    setupControls() {
+        // Toggle panel
+        const toggleBtn = document.getElementById('toggle-panel');
+        const controls = document.getElementById('controls');
+        toggleBtn.addEventListener('click', () => {
+            controls.classList.toggle('hidden');
+            toggleBtn.textContent = controls.classList.contains('hidden') ? 'Show Controls' : 'Hide Controls';
+        });
+        
+        // Particle Style
+        const particleStyle = document.getElementById('particleStyle');
+        particleStyle.value = this.ParticleStyle;
+        particleStyle.addEventListener('change', (e) => {
+            this.SetMode(parseInt(e.target.value));
+        });
+        
+        // Wall Style
+        const wallStyle = document.getElementById('wallStyle');
+        wallStyle.value = this.WallStyle;
+        wallStyle.addEventListener('change', (e) => {
+            this.WallStyle = parseInt(e.target.value);
+        });
+        
+        // Color Scheme
+        const colorScheme = document.getElementById('colorScheme');
+        const colorButtons = document.getElementById('colorButtons');
+        const color1 = document.getElementById('color1');
+        const color2 = document.getElementById('color2');
+        
+        colorScheme.addEventListener('change', (e) => {
+            const val = parseInt(e.target.value);
+            if (val === -1) {
+                // Custom colors
+                colorButtons.style.display = 'flex';
+                this.CustomScheme = true;
+            } else {
+                colorButtons.style.display = 'none';
+                this.CustomScheme = false;
+                this.ColorScheme = val;
+                this.generatePalette();
+            }
+        });
+        
+        color1.addEventListener('input', () => this.updateCustomColors());
+        color2.addEventListener('input', () => this.updateCustomColors());
+        
+        // Sliders
+        const particleCount = document.getElementById('particleCount');
+        const particleCountVal = document.getElementById('particleCountVal');
+        particleCount.value = this.nParticles;
+        particleCountVal.textContent = this.nParticles;
+        particleCount.addEventListener('input', (e) => {
+            this.nParticles = parseInt(e.target.value);
+            particleCountVal.textContent = this.nParticles;
+        });
+        
+        const gravityTime = document.getElementById('gravityTime');
+        const gravityTimeVal = document.getElementById('gravityTimeVal');
+        gravityTime.value = this.GRAV_TIME;
+        gravityTimeVal.textContent = this.GRAV_TIME + 's';
+        gravityTime.addEventListener('input', (e) => {
+            this.GRAV_TIME = parseInt(e.target.value);
+            gravityTimeVal.textContent = this.GRAV_TIME + 's';
+        });
+        
+        const eventSpeed = document.getElementById('eventSpeed');
+        const eventSpeedVal = document.getElementById('eventSpeedVal');
+        eventSpeed.value = this.RANDEFFECT;
+        eventSpeedVal.textContent = this.RANDEFFECT;
+        eventSpeed.addEventListener('input', (e) => {
+            this.RANDEFFECT = parseInt(e.target.value);
+            eventSpeedVal.textContent = this.RANDEFFECT;
+        });
+        
+        const fadeSpeed = document.getElementById('fadeSpeed');
+        const fadeSpeedVal = document.getElementById('fadeSpeedVal');
+        fadeSpeed.value = this.BURNFADE;
+        fadeSpeedVal.textContent = this.BURNFADE;
+        fadeSpeed.addEventListener('input', (e) => {
+            this.BURNFADE = parseInt(e.target.value);
+            fadeSpeedVal.textContent = this.BURNFADE;
+        });
+        
+        const textSpeed = document.getElementById('textSpeed');
+        const textSpeedVal = document.getElementById('textSpeedVal');
+        textSpeed.value = this.QuoteSecs;
+        textSpeedVal.textContent = this.QuoteSecs + 's';
+        textSpeed.addEventListener('input', (e) => {
+            this.QuoteSecs = parseInt(e.target.value);
+            textSpeedVal.textContent = this.QuoteSecs + 's';
+        });
+        
+        // Checkboxes
+        const followMouse = document.getElementById('followMouse');
+        followMouse.checked = this.FollowMouse;
+        followMouse.addEventListener('change', (e) => {
+            this.FollowMouse = e.target.checked;
+            document.body.style.cursor = this.FollowMouse ? 'none' : 'auto';
+        });
+        
+        const cycleColors = document.getElementById('cycleColors');
+        cycleColors.checked = this.CycleColors;
+        cycleColors.addEventListener('change', (e) => {
+            this.CycleColors = e.target.checked;
+        });
+        
+        const randomColors = document.getElementById('randomColors');
+        randomColors.checked = this.RandomColor;
+        randomColors.addEventListener('change', (e) => {
+            this.RandomColor = e.target.checked;
+        });
+        
+        const showText = document.getElementById('showText');
+        showText.checked = !this.DisableText;
+        showText.addEventListener('change', (e) => {
+            this.DisableText = !e.target.checked;
+        });
+        
+        const useGravity = document.getElementById('useGravity');
+        useGravity.checked = this.UseGravity;
+        useGravity.addEventListener('change', (e) => {
+            this.UseGravity = e.target.checked;
+        });
+        
+        const useRandom = document.getElementById('useRandom');
+        useRandom.checked = this.UseRandom;
+        useRandom.addEventListener('change', (e) => {
+            this.UseRandom = e.target.checked;
+        });
+        
+        // Explode button
+        const explodeBtn = document.getElementById('explodeBtn');
+        explodeBtn.addEventListener('click', () => {
+            this.Explode = true;
+        });
+    }
+    
+    updateCustomColors() {
+        const color1 = document.getElementById('color1').value;
+        const color2 = document.getElementById('color2').value;
+        
+        // Convert hex to RGB
+        const hexToRgb = (hex) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        };
+        
+        const rgb1 = hexToRgb(color1);
+        const rgb2 = hexToRgb(color2);
+        
+        if (rgb1 && rgb2) {
+            // Generate custom palette
+            for (let i = 0; i < 256; i++) {
+                const entry = this.pe[i] || { peRed: 0, peGreen: 0, peBlue: 0 };
+                
+                if (i < 128) {
+                    // Black to color1
+                    const t = i / 128;
+                    entry.peRed = Math.floor(t * rgb1.r);
+                    entry.peGreen = Math.floor(t * rgb1.g);
+                    entry.peBlue = Math.floor(t * rgb1.b);
+                } else {
+                    // Color1 to color2
+                    const t = (i - 128) / 127;
+                    entry.peRed = Math.floor(rgb1.r + t * (rgb2.r - rgb1.r));
+                    entry.peGreen = Math.floor(rgb1.g + t * (rgb2.g - rgb1.g));
+                    entry.peBlue = Math.floor(rgb1.b + t * (rgb2.b - rgb1.b));
+                }
+                
+                this.pe[i] = entry;
+            }
+            
+            // Update particle colors
+            for (let i = 0; i < this.nParticles; i++) {
+                this.p[i].setTrueColor(this.pe);
+            }
+        }
+    }
+}
+
+// Helper function for random floats (matching C++ frand)
+function frand(range) {
+    return (Math.random() - 0.5) * 2 * range;
+}
+
+// Initialize
+window.addEventListener('load', () => {
+    const canvas = document.getElementById('canvas');
+    new ParticleFire(canvas);
+});
+    </script>
+</body>
+</html>
